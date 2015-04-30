@@ -1,7 +1,8 @@
 local UnPooling, parent = torch.class('nn.UnPooling', 'nn.Module')
 
 require 'sys'
-require 'cutorch'
+require 'modules/prequire'
+cutorch_mod = prequire('cutorch')
 
 function UnPooling:__init(s)
    parent.__init(self)

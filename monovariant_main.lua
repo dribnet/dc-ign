@@ -7,18 +7,23 @@ require 'torch'
 require 'nn'
 require 'rmsprop'
 
+require 'modules/prequire'
 require 'modules/KLDCriterion'
 require 'modules/LinearCR'
 require 'modules/Reparametrize'
 require 'modules/SelectiveOutputClamp'
 require 'modules/SelectiveGradientFilter'
 
-require 'cutorch'
-require 'cunn'
+cutorch_mod = prequire('cutorch')
+cunn_mod = prequire('cunn')
 require 'optim'
 require 'testf'
 require 'utils'
 require 'config'
+
+if cutorch_mod then
+  print(  cutorch.getDeviceProperties(cutorch.getDevice()) )
+end
 
 cmd = torch.CmdLine()
 cmd:text()
@@ -93,10 +98,12 @@ criterion.sizeAverage = false
 KLD = nn.KLDCriterion()
 KLD.sizeAverage = false
 
-criterion:cuda()
-KLD:cuda()
-model:cuda()
-cutorch.synchronize()
+if cutorch_mod then
+  criterion:cuda()
+  KLD:cuda()
+  model:cuda()
+  cutorch.synchronize()
+end
 
 parameters, gradients = model:getParameters()
 print('Num before', #parameters)
@@ -168,7 +175,9 @@ while true do
       gradFilters[clampIndex].active = true
     end
 
-    batch = batch:cuda()
+    if cutorch_mod then
+      batch = batch:cuda()
+    end
 
     --Optimization function
     local opfunc = function(x)

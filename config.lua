@@ -1,5 +1,6 @@
+require 'modules/prequire'
 require 'modules/UnPooling'
-require 'cudnn'
+cunn_mod = prequire('cunn')
 --Global variables for config
 bsize = 50
 imwidth = 150
@@ -7,6 +8,10 @@ imwidth = 150
 TOTALFACES = 5230
 num_train_batches = 5000
 num_test_batches =  TOTALFACES-num_train_batches
+
+if not cudnn then
+  cudnn = nn
+end
 
 -- config = {
 --     learningRate = -0.0005,
@@ -142,7 +147,9 @@ function init_network2_150_mv(dim_hidden, feature_maps)
   model:add(nn.Reparametrize(dim_hidden))
   model:add(decoder)
 
-  model:cuda()
+  if cunn_mod then
+    model:cuda()
+  end
   collectgarbage()
   return model
 end
