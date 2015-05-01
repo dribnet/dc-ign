@@ -7,23 +7,16 @@ require 'torch'
 require 'nn'
 require 'rmsprop'
 
-require 'modules/prequire'
 require 'modules/KLDCriterion'
 require 'modules/LinearCR'
 require 'modules/Reparametrize'
 require 'modules/SelectiveOutputClamp'
 require 'modules/SelectiveGradientFilter'
 
-cutorch_mod = prequire('cutorch')
-cunn_mod = prequire('cunn')
 require 'optim'
 require 'testf'
 require 'utils'
 require 'config'
-
-if cutorch_mod then
-  print(  cutorch.getDeviceProperties(cutorch.getDevice()) )
-end
 
 cmd = torch.CmdLine()
 cmd:text()
@@ -50,6 +43,8 @@ cmd:option('--shape_bias_amount', 15,             'the ratio of extra samples fr
 
 cmd:option('--learning_rate',     -0.0005,        'learning rate for the network')
 cmd:option('--momentum_decay',    0.1,            'decay rate for momentum in rmsprop')
+cmd:option('--gpu',               false,          'use CUDA for acceleration')
+cmd:option('--random_data',       false,          'use random input data (useful for testing)')
 
 cmd:text()
 cmd:text()
@@ -66,7 +61,13 @@ cmd:text()
 
 opt = cmd:parse(arg)
 opt.save = paths.concat(opt.networks_dir, opt.name)
-os.execute('mkdir ' .. opt.save)
+os.execute('mkdir -p ' .. opt.save)
+
+if opt.gpu then
+  require 'cutorch'
+  require 'cunn'
+  print(  cutorch.getDeviceProperties(cutorch.getDevice()) )
+end
 
 config = {
     learningRate = opt.learning_rate,
@@ -88,9 +89,7 @@ f:close()
 MODE_TRAINING = "FT_training"
 MODE_TEST = "FT_test"
 
-
-model = init_network2_150_mv(opt.dim_hidden, opt.feature_maps)
-
+model = init_network2_150_mv(opt.dim_hidden, opt.feature_maps, opt.gpu)
 
 criterion = nn.BCECriterion()
 criterion.sizeAverage = false
@@ -98,7 +97,7 @@ criterion.sizeAverage = false
 KLD = nn.KLDCriterion()
 KLD.sizeAverage = false
 
-if cutorch_mod then
+if opt.gpu then
   criterion:cuda()
   KLD:cuda()
   model:cuda()
@@ -175,9 +174,7 @@ while true do
       gradFilters[clampIndex].active = true
     end
 
-    if cutorch_mod then
-      batch = batch:cuda()
-    end
+    if opt.gpu then batch = batch:cuda() end
 
     --Optimization function
     local opfunc = function(x)

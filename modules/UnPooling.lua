@@ -1,8 +1,6 @@
 local UnPooling, parent = torch.class('nn.UnPooling', 'nn.Module')
 
 require 'sys'
-require 'modules/prequire'
-cutorch_mod = prequire('cutorch')
 
 function UnPooling:__init(s)
    parent.__init(self)
@@ -17,9 +15,9 @@ function UnPooling:updateOutput(input)
    local bsize = input:size()[1]
    local dim  = input:size()[3]
    local sdim = dim*self.scale
-   
+
    self.output = torch.zeros(bsize, input:size()[2] , sdim, sdim )
-   
+
    local ii,jj,kk; ii=1;jj=1;kk=1;
 
    self.mapping = {} -- store non-zero mappings for gradient calc
@@ -34,7 +32,9 @@ function UnPooling:updateOutput(input)
       ii = ii + 1;
    end
 
-   self.output = self.output:cuda()
+   if torch.typename(input[1]) == 'torch.CudaTensor' then
+      self.output = self.output:cuda()
+   end
    return self.output
 end
 
@@ -44,18 +44,18 @@ function UnPooling:updateGradInput(input, gradOutput)
    input = input:float()
 
    local dim  = input:size()[3]
-   
+
    self.gradInput = torch.zeros(bsize, input:size()[2], dim, dim)
 
    for ii=1,dim do
       for jj=1,dim do
          local t = self.mapping[ii .. jj]
          i = t[1]; j = t[2];
-         self.gradInput[{{},{},ii,jj}] = gradOutput[{{},{}, i,j}]   
+         self.gradInput[{{},{},ii,jj}] = gradOutput[{{},{}, i,j}]
       end
    end
 
-   self.gradInput = self.gradInput:cuda()
+   if opt.gpu then self.gradInput = self.gradInput:cuda() end
    return self.gradInput
 end
 

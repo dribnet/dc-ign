@@ -8,7 +8,7 @@ function Reparametrize:__init(dimension)
     self.size = torch.LongStorage()
     self.dimension = dimension
     self.gradInput = {}
-end 
+end
 
 function Reparametrize:updateOutput(input)
     self.eps = torch.randn(input[2]:size(1),self.dimension)
@@ -31,8 +31,8 @@ end
 function Reparametrize:updateGradInput(input, gradOutput)
     -- Derivative with respect to mean is 1
     self.gradInput[1] = gradOutput:clone()
-    
-    --test gradient with Jacobian
+
+    -- test gradient with Jacobian
     if torch.typename(input[1]) == 'torch.CudaTensor' then
         self.gradInput[2] = torch.CudaTensor():resizeAs(input[2]):fill(0.5)
     else
